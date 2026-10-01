@@ -4,6 +4,11 @@ First run all four examples as they are (`python3 demo.py`, options 1 to 4). The
 
 For your challenge, write down what you changed, what the model answered, and whether it was right. Be ready to share the failure you found.
 
+You can also use the interactive menu: run `python3 demo.py`, choose the example,
+and type the challenge question when prompted. Press Enter to keep the preset
+instructions, or replace them to experiment. No quotation marks are needed in
+the interactive prompts. The commands below are shortcuts that run immediately.
+
 ## 1. Teach it something new (RAG)
 
 Create `policies/student-discount.txt` with:

@@ -19,6 +19,18 @@ Start Ollama, then run from this folder:
 python3 demo.py
 ```
 
+Choose an example, then enter your question and optional replacement instructions.
+Press Enter at either prompt to keep its preset. The menu returns after each run.
+Example 1 keeps the first request as a baseline and edits only the second request's
+instructions; example 2 uses the edited instructions for both comparisons.
+Each menu selection starts a fresh experiment with the presets.
+
+Direct commands still run immediately. To change instructions there, use:
+
+```sh
+python3 demo.py prompt --question 'Can I return it late?' --instructions 'Ask for the rental policy before answering.'
+```
+
 Requires Python 3 and the local Ollama model `qwen3.5:4b` (already installed when
 this project was created). If missing, run `ollama pull qwen3.5:4b` before class.
 The first model request may take longer while loading. Subsequent calls request

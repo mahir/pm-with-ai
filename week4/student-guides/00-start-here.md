@@ -39,7 +39,21 @@ Windows PowerShell:
 py -3 demo.py
 ```
 
-Choose `1`, `2`, `3`, or `4`, then press Enter. Enter `q` to quit.
+Choose `1`, `2`, `3`, or `4`, then press Enter. The program shows the preset
+question and instructions before running:
+
+1. Type your own question, or press Enter to keep the displayed question.
+2. Type replacement instructions, or press Enter to keep the displayed instructions.
+3. Inspect the actual prompt and response, then press Enter to return to the menu.
+
+Type plain text at these prompts; no shell quotes are needed, even for dollar
+amounts. Each selection starts fresh with the presets, not the previous run's edits.
+In example 1, your instructions replace only the second request's instructions;
+the first remains the baseline. In example 2, they apply to both requests and the
+example pairs remain unchanged. In examples 3 and 4, they replace the system
+instructions; retrieval and calculator code remain in place.
+
+Enter `q` at the example menu to quit.
 In all the guides below, Windows users should replace `python3` with `py -3`.
 Commands with single-quoted questions work in PowerShell and Mac/Linux shells;
 use PowerShell rather than Windows Command Prompt.
