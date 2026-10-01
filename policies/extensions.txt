@@ -1,0 +1,3 @@
+CampusKit extension policy (fictional classroom example)
+Customers may request an extension before their equipment is due.
+Extensions require staff approval and depend on availability.
