@@ -6,6 +6,8 @@ Python dependencies, vector database, or fine-tuning.
 Students: begin with [the quick-start guide](student-guides/00-start-here.md),
 then follow the separate exercise file for each example.
 
+After running the four examples, pick an [in-class challenge](CHALLENGES.md).
+
 For the Codex walkthrough, use [the demonstration prompts](CODEX-DEMO-PROMPTS.md)
 covering planning, implementation, review, goals, and delegation.
 

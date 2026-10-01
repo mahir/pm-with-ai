@@ -57,6 +57,8 @@ Labels still distinguish them if your terminal does not display colors.
 For each exercise, note what you changed, what the model answered, and whether
 the answer was correct. Different outputs from your instructor's are valid observations.
 
+After running all four examples, pick one [in-class challenge](../CHALLENGES.md).
+
 ## If something fails
 
 | Problem | Try this |
@@ -67,4 +69,3 @@ the answer was correct. Different outputs from your instructor's are valid obser
 | Model not found | Run `ollama pull qwen3.5:4b` and wait for completion. |
 | Slow response or timeout | The first request can take longer to load. Close memory-heavy apps and try again. If your machine cannot run it, pair with a classmate; speed is not the learning objective. |
 | Odd or wrong answer | Check the displayed prompt, source, and tool arguments. Record the failure rather than assuming the method worked. |
-
