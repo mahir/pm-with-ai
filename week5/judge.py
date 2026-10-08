@@ -15,7 +15,7 @@ import json
 import sys
 import urllib.error
 
-from eval import MODEL, ROOT, ask, one_line, parse
+from eval import MODEL, ROOT, ask, color, one_line, parse
 
 JUDGE = """You are checking one thing only.
 Does the reason name something in the text?
@@ -31,7 +31,7 @@ def judge(text, reason, model):
 def check_the_judge(model):
     labeled = json.loads((ROOT / "reasons.json").read_text())
     caught = missed = false_alarms = ok = 0
-    print(f"\nJudging {len(labeled)} reasons a person already labeled\n")
+    print(color(f"\nJudging {len(labeled)} reasons a person already labeled\n", "cyan"))
     for item in labeled:
         judge_fail, answer = judge(item["text"], item["reason"], model)
         human_fail = item["human"] == "fail"
@@ -47,32 +47,35 @@ def check_the_judge(model):
         else:
             ok += 1
             result = "ok"
-        print(f"{result:>11}  {item['id']:>2}  {one_line(item['reason'], 70)}")
+        style = "green" if result in ("caught", "ok") else "red"
+        print(f"{color(f'{result:>11}', style)}  {item['id']:>2}  {one_line(item['reason'], 70)}")
         if result in ("MISSED", "FALSE ALARM"):
-            print(f"{'':>15}person: {item['human']} ({item['note']})")
-            print(f"{'':>15}judge:  {one_line(answer)}")
+            print(f"{'':>15}{color('person:', 'cyan')} {item['human']} ({item['note']})")
+            print(f"{'':>15}{color('judge:', 'yellow')}  {one_line(answer)}")
+            print()
 
-    print(f"\nCatch rate:      {caught} of {caught + missed} bad reasons")
-    print(f"False alarms:    {false_alarms} of {false_alarms + ok} good reasons")
-    print(f"Plain agreement: {caught + ok} of {len(labeled)}."
-          " Look at the first two numbers before you trust it.\n")
+    print(color(f"\nCatch rate:      {caught} of {caught + missed} bad reasons", "bold"))
+    print(color(f"False alarms:    {false_alarms} of {false_alarms + ok} good reasons", "bold"))
+    print(color(f"Plain agreement: {caught + ok} of {len(labeled)}.", "bold"))
+    print("Look at the first two numbers before you trust it.\n")
 
 
 def judge_latest_run(model):
     latest = ROOT / "runs" / "latest.json"
     if not latest.exists():
-        sys.exit("No run found. Run python3 eval.py first.")
+        sys.exit(color("No run found. Run python3 eval.py first.", "red", sys.stderr))
     run = json.loads(latest.read_text())
     flagged = 0
-    print(f"Judging the reasons from the eval run of {run['when']}\n")
+    print(color(f"Judging the reasons from the eval run of {run['when']}\n", "cyan"))
     for row in run["rows"]:
         out = parse(row["output"])
         if not out or not out.get("reason"):
             continue
         judge_fail, answer = judge(row["text"], out["reason"], model)
         flagged += judge_fail
-        print(f"{'FAIL' if judge_fail else 'PASS'}  {row['id']:>2}  {one_line(out['reason'], 80)}")
-    print(f"\nThe judge failed {flagged} reasons. Read them: is it right?\n")
+        status = color("FAIL", "red") if judge_fail else color("PASS", "green")
+        print(f"{status}  {row['id']:>2}  {one_line(out['reason'], 80)}")
+    print(color(f"\nThe judge failed {flagged} reasons. Read them: is it right?\n", "bold"))
 
 
 def main():
@@ -87,7 +90,7 @@ def main():
         if args.latest:
             judge_latest_run(args.model)
     except urllib.error.URLError as e:
-        sys.exit(f"\nCould not reach Ollama. Is it running? ({e})")
+        sys.exit(color(f"\nCould not reach Ollama. Is it running? ({e})", "red", sys.stderr))
 
 
 if __name__ == "__main__":

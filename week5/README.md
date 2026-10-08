@@ -22,6 +22,11 @@ said, what we expected, and why it failed. Then the score, how many scams it
 caught, how many false alarms it raised, the failures by category, and the
 score history.
 
+Terminal colors help you scan: green for passes and judge agreement, red for
+failures and judge mistakes, yellow for failure details, and cyan for headings
+and labels. Scores are bold. PASS/FAIL labels stay visible without color.
+Colors turn off when output is piped or redirected, or when `NO_COLOR` is set.
+
 ## The loop
 
 1. Run `python3 eval.py`.
@@ -44,16 +49,26 @@ A change that fixes one text can break another. That is why it reruns all 20.
 
 ## What the checks look for
 
+`eval.py` runs two kinds of checks, the first two of the four ways to check from class.
+
+**1. Reference examples** (`check_reference`): compare the verdict to the answer key.
+
 | Failure | When |
 |---|---|
 | missed a scam | The text is a scam and the checker said safe. The costly one. |
 | false alarm | The text is safe and the checker said scam. |
-| not JSON | The reply is not a JSON object. Code fences are allowed. |
-| no reason | No reason given. |
-| reason too long | The reason is over 25 words. |
 
-Code can check the verdict, because each text has one right answer. Code can't
-tell whether the reason is true to the text. That is what the judge is for.
+**2. Code rules** (`check_rules`): need no answer key, so they would work on new texts too.
+
+| Failure | When |
+|---|---|
+| not JSON | The reply is not a JSON object. Code fences are allowed. |
+| verdict is not scam or safe | The verdict is anything else. |
+| no reason, reason too long | No reason, or a reason over 25 words. |
+| link plus money, marked safe | The never rule: a text with a link and a money word is never safe. |
+
+Code can't tell whether the reason is true to the text. That needs a person
+(human review) or a model you have checked (`judge.py`).
 
 Two of the expected answers are choices you can argue with:
 

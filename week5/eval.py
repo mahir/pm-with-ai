@@ -14,6 +14,7 @@ import argparse
 import csv
 import hashlib
 import json
+import os
 import re
 import sys
 import time
@@ -27,6 +28,15 @@ ROOT = Path(__file__).resolve().parent
 MODEL = "qwen3.5:4b"
 OLLAMA = "http://localhost:11434/api/chat"
 MAX_REASON_WORDS = 25
+
+
+def color(text, style, stream=None):
+    """Color terminal output only; NO_COLOR disables it. Saved data stays plain."""
+    stream = sys.stdout if stream is None else stream
+    if not stream.isatty() or "NO_COLOR" in os.environ or os.environ.get("TERM") == "dumb":
+        return text
+    codes = {"green": "32", "red": "31", "yellow": "33", "cyan": "36", "bold": "1"}
+    return f"\033[{codes[style]}m{text}\033[0m"
 
 
 def ask(system, user, model):
@@ -53,24 +63,44 @@ def parse(text):
     return out if isinstance(out, dict) else None
 
 
-def check(out, want):
-    """Compare one output to the answer we expect ("scam" or "safe").
-    Returns failures in plain words. An empty list means the text passed."""
-    if out is None:
-        return ["not JSON"]
+# Check 1: reference examples. Needs the answer key (the "want" in texts.json).
+def check_reference(out, want):
+    said = str(out.get("verdict") or "").strip().lower()
     fails = []
-    verdict = str(out.get("verdict") or "").strip().lower()
-    if want == "scam" and verdict != "scam":
+    if want == "scam" and said != "scam":
         fails.append("missed a scam")
-    if want == "safe" and verdict != "safe":
+    if want == "safe" and said != "safe":
         fails.append("false alarm")
+    return fails
 
+
+# Check 2: code rules. Need no answer key, so they work on any text, even new ones.
+LINK = r"https?://|\.(com|net|org|example)\b"
+MONEY = r"\$\d|\bpay\b|refund|claim|gift card|bank details"
+
+
+def check_rules(text, out):
+    verdict = str(out.get("verdict") or "").strip().lower()
     reason = str(out.get("reason") or "").strip()
+    fails = []
+    if verdict not in ("scam", "safe"):
+        fails.append("verdict is not scam or safe")
     if not reason:
         fails.append("no reason")
     elif len(reason.split()) > MAX_REASON_WORDS:
         fails.append("reason too long")
+    risky = re.search(LINK, text) and re.search(MONEY, text, re.I)
+    if risky and verdict == "safe":  # the never rule
+        fails.append("link plus money, marked safe")
     return fails
+
+
+def check(text, out, want):
+    """All the checks for one text. Returns failures in plain words.
+    An empty list means the text passed."""
+    if out is None:
+        return ["not JSON"]
+    return check_reference(out, want) + check_rules(text, out)
 
 
 def one_line(text, width=100):
@@ -109,25 +139,28 @@ def main():
     prompt = (ROOT / "prompt.md").read_text()
     texts = json.loads((ROOT / "texts.json").read_text())
     version = hashlib.sha1(prompt.encode()).hexdigest()[:7]
-    print(f"\n{len(texts)} texts, prompt.md version {version}, model {args.model}\n")
+    print(color(f"\n{len(texts)} texts, prompt.md version {version}, model {args.model}\n", "cyan"))
 
     rows, start = [], time.monotonic()
     for item in texts:
         try:
             raw = ask(prompt, item["text"], args.model)
         except urllib.error.HTTPError as e:
-            sys.exit(f"\nOllama returned an error: {e.read().decode()[:200]}\n"
-                     f"Is the model installed? Try: ollama pull {args.model}")
+            sys.exit(color(f"\nOllama returned an error: {e.read().decode()[:200]}\n"
+                           f"Is the model installed? Try: ollama pull {args.model}", "red", sys.stderr))
         except urllib.error.URLError as e:
-            sys.exit(f"\nCould not reach Ollama at {OLLAMA}. Is it running? ({e.reason})")
-        fails = check(parse(raw), item["want"])
+            sys.exit(color(f"\nCould not reach Ollama at {OLLAMA}. Is it running? ({e.reason})",
+                           "red", sys.stderr))
+        fails = check(item["text"], parse(raw), item["want"])
         rows.append({**item, "output": raw, "fails": fails})
-        print(f"{'PASS' if not fails else 'FAIL'}  {item['id']:>2}  {one_line(item['text'], 80)}")
+        status = color("FAIL", "red") if fails else color("PASS", "green")
+        print(f"{status}  {item['id']:>2}  {one_line(item['text'], 80)}")
         if fails or args.show_all:
-            print(f"          said:     {one_line(raw)}")
+            print(f"          {color('said:', 'cyan')}     {one_line(raw)}")
         if fails:
-            print(f"          expected: {item['want']} ({item['note']})")
-            print(f"          why:      {', '.join(fails)}")
+            print(f"          {color('expected:', 'cyan')} {item['want']} ({item['note']})")
+            print(f"          {color('why:', 'yellow')}      {color(', '.join(fails), 'yellow')}")
+            print()
 
     passed = sum(not row["fails"] for row in rows)
     scams = [r for r in rows if r["want"] == "scam"]
@@ -136,20 +169,20 @@ def main():
     alarms = sum("false alarm" in r["fails"] for r in safes)
     counts = Counter(f for row in rows for f in row["fails"])
 
-    print(f"\nScore: {passed} of {len(rows)} passed ({passed / len(rows):.0%})"
-          f"   [{time.monotonic() - start:.0f} seconds]")
+    print(color(f"\nScore: {passed} of {len(rows)} passed ({passed / len(rows):.0%})"
+                f"   [{time.monotonic() - start:.0f} seconds]", "bold"))
     print(f"Scams caught: {caught} of {len(scams)}.  False alarms: {alarms} of {len(safes)} safe texts.")
     if counts:
-        print("\nFailures by category (one text can fail more than one check):")
+        print(color("\nFailures by category (one text can fail more than one check):", "cyan"))
         for name, n in counts.most_common():
-            print(f"  {n:>2}  {name}")
+            print(color(f"  {n:>2}  {name}", "yellow"))
 
     history = save(rows, version, args.model, passed)
-    print("\nScore history (scores.csv):")
+    print(color("\nScore history (scores.csv):", "cyan"))
     for run in history[-5:]:
         print(f"  {run['when']}  prompt {run['prompt_version']}  {run['model']}"
               f"  {run['passed']} of {run['total']}")
-    print("\nEvery output from this run is in runs/latest.json.\n")
+    print(color("\nEvery output from this run is in runs/latest.json.\n", "cyan"))
 
 
 if __name__ == "__main__":
